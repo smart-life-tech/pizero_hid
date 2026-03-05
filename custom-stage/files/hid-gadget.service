@@ -1,0 +1,12 @@
+[Unit]
+Description=Configure USB HID Composite Gadget
+After=sys-kernel-config.mount
+Wants=sys-kernel-config.mount
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/usb-hid-gadget.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

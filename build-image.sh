@@ -9,6 +9,7 @@ CUSTOM_STAGE_DST="${PI_GEN_DIR}/stage-hid"
 WIFI_SSID="${WIFI_SSID:-}"
 WIFI_PSK="${WIFI_PSK:-}"
 WIFI_COUNTRY="${WIFI_COUNTRY:-US}"
+PI_GEN_BRANCH="${PI_GEN_BRANCH:-bookworm}"
 
 ensure_native_deps() {
   # Only pre-check on Debian-like systems where we can provide exact package help.
@@ -67,7 +68,14 @@ if [[ -z "${WIFI_SSID}" || -z "${WIFI_PSK}" ]]; then
 fi
 
 if [[ ! -d "${PI_GEN_DIR}" ]]; then
-  git clone --depth 1 https://github.com/RPi-Distro/pi-gen.git "${PI_GEN_DIR}"
+  git clone --depth 1 --branch "${PI_GEN_BRANCH}" https://github.com/RPi-Distro/pi-gen.git "${PI_GEN_DIR}"
+else
+  current_branch="$(git -C "${PI_GEN_DIR}" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  if [[ -n "${current_branch}" && "${current_branch}" != "${PI_GEN_BRANCH}" ]]; then
+    echo "WARNING: pi-gen is on branch '${current_branch}', expected '${PI_GEN_BRANCH}'."
+    echo "         This can trigger RELEASE mismatch warnings during build."
+    echo "         To align: cd \"${PI_GEN_DIR}\" && git fetch --all && git checkout \"${PI_GEN_BRANCH}\""
+  fi
 fi
 
 if [[ ! -d "${CUSTOM_STAGE_SRC}" ]]; then

@@ -30,6 +30,19 @@ sudo apt-get install -y quilt qemu-user-binfmt debootstrap zerofree libarchive-t
 If `xxd` is unavailable as a standalone package on your distro, install `vim-common` instead.
 If `qemu-user-binfmt` is unavailable, install `qemu-user-static binfmt-support`.
 
+## pi-gen Branch/Release Alignment
+
+This script defaults to cloning `pi-gen` branch `bookworm` to match `RELEASE='bookworm'`.
+
+If you already cloned `pi-gen` on another branch and see a `RELEASE does not match` warning, run:
+
+```bash
+cd pi-gen
+git fetch --all
+git checkout bookworm
+cd ..
+```
+
 ## Quick start (WSL/Linux)
 
 1. Open terminal in this repo.

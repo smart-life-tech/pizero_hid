@@ -28,6 +28,7 @@ sudo apt-get install -y quilt qemu-user-binfmt debootstrap zerofree libarchive-t
 ```
 
 If `xxd` is unavailable as a standalone package on your distro, install `vim-common` instead.
+If `qemu-user-binfmt` is unavailable, install `qemu-user-static binfmt-support`.
 
 ## Quick start (WSL/Linux)
 

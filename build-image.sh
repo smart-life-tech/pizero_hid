@@ -18,7 +18,6 @@ ensure_native_deps() {
 
   local -a required_pkgs=(
     quilt
-    qemu-user-binfmt
     debootstrap
     zerofree
     libarchive-tools
@@ -34,6 +33,12 @@ ensure_native_deps() {
     fi
   done
 
+  # Some distros provide user-mode emulation via qemu-user-static instead.
+  if ! dpkg-query -W -f='${Status}' qemu-user-binfmt 2>/dev/null | grep -q "install ok installed" \
+    && ! dpkg-query -W -f='${Status}' qemu-user-static 2>/dev/null | grep -q "install ok installed"; then
+    missing_pkgs+=("qemu-user-binfmt")
+  fi
+
   # xxd may be shipped by either `xxd` or `vim-common`, depending on distro.
   if ! command -v xxd >/dev/null 2>&1; then
     if ! dpkg-query -W -f='${Status}' xxd 2>/dev/null | grep -q "install ok installed" \
@@ -48,6 +53,7 @@ ensure_native_deps() {
     echo "Install them with:"
     echo "  sudo apt-get update"
     echo "  sudo apt-get install -y ${missing_pkgs[*]}"
+    echo "  # If qemu-user-binfmt is unavailable, try: sudo apt-get install -y qemu-user-static binfmt-support"
     echo
     echo "Then re-run: ./build-image.sh"
     exit 1

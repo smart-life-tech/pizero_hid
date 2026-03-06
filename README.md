@@ -89,3 +89,26 @@ sudo /usr/local/sbin/hid-postboot-verify.sh
 - This setup only ensures valid HID enumeration and device nodes (`/dev/hidg0`, `/dev/hidg1`).
 - It does **not** auto-send keystrokes/mouse movement by default.
 - You can later write your own sender app using those HID device nodes.
+
+## Windows descriptor stability tips
+
+- The gadget script now uses boot-compatible keyboard/mouse descriptors and stable identity strings by default.
+- Keep `USB_VID`, `USB_PID`, and `USB_SERIAL` stable once Windows has installed drivers for the device.
+- If you do change descriptors, Windows may keep old cache entries for that identity.
+
+Optional overrides in `usb-hid-gadget.sh` environment:
+
+```bash
+USB_VID=0x1d6b
+USB_PID=0x0104
+USB_SERIAL=PIHID00000001
+USB_MANUFACTURER="Raspberry Pi"
+USB_PRODUCT="Pi Zero HID Composite"
+```
+
+If Windows still misidentifies after descriptor changes:
+
+1. Disconnect the Pi.
+2. In Device Manager, enable **View -> Show hidden devices**.
+3. Remove old entries under **Keyboards**, **Mice and other pointing devices**, and **Human Interface Devices** associated with the old VID/PID/serial.
+4. Reconnect the Pi to let Windows enumerate fresh descriptors.

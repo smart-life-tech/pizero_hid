@@ -58,6 +58,41 @@ WIFI_COUNTRY="US" \
 
 If successful, your final image will be under `pi-gen/deploy/`.
 
+## Running on a Pi 3B over SSH (recommended method)
+
+Building `pi-gen` directly on a Pi 3B can temporarily drop SSH if the device hits thermal, power, or memory pressure.
+
+Use detached mode so the build keeps running even if SSH disconnects:
+
+```bash
+chmod +x ./build-image.sh ./run-build-safe.sh
+WIFI_SSID="ember_wolf" \
+WIFI_PSK="YOUR_WIFI_PASSWORD" \
+WIFI_COUNTRY="US" \
+./run-build-safe.sh
+```
+
+Then reconnect later and check:
+
+```bash
+ls -1 logs/
+tail -f logs/<latest-log-file>.log
+```
+
+If the Pi went offline during build, check likely causes:
+
+```bash
+vcgencmd get_throttled
+dmesg -T | grep -Ei 'Out of memory|Killed process|oom|under-voltage|voltage'
+journalctl -b -1 -e
+```
+
+Notes for Pi 3B:
+
+- Prefer wired Ethernet instead of Wi-Fi while building.
+- Use a solid 5V/2.5A PSU and known-good data cable.
+- Ensure cooling (heatsink/fan), since long builds can trigger throttling.
+
 ## Troubleshooting: `target is busy` during unmount
 
 On some native (non-Docker) builds, `pi-gen` can fail to unmount stage rootfs paths such as `/proc` or `/sys`.

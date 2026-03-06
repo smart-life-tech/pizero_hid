@@ -11,6 +11,12 @@ WIFI_PSK="${WIFI_PSK:-}"
 WIFI_COUNTRY="${WIFI_COUNTRY:-US}"
 PI_GEN_BRANCH="${PI_GEN_BRANCH:-bookworm}"
 
+if [[ -n "${SSH_CONNECTION:-}" ]] && [[ -z "${TMUX:-}" ]] && [[ -z "${STY:-}" ]]; then
+  echo "INFO: Running over SSH without tmux/screen."
+  echo "      If the network drops, your shell may terminate the build."
+  echo "      Prefer: ./run-build-safe.sh"
+fi
+
 run_privileged() {
   if [[ "${EUID}" -eq 0 ]]; then
     "$@"

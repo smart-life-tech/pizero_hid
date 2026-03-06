@@ -58,6 +58,18 @@ WIFI_COUNTRY="US" \
 
 If successful, your final image will be under `pi-gen/deploy/`.
 
+## Troubleshooting: `target is busy` during unmount
+
+On some native (non-Docker) builds, `pi-gen` can fail to unmount stage rootfs paths such as `/proc` or `/sys`.
+
+`build-image.sh` now performs an automatic stale mount cleanup pass before native builds and after failed runs.
+
+If a failure still repeats, inspect lingering processes with:
+
+```bash
+sudo lsof +D "./pi-gen/work"
+```
+
 ## Flash and use
 
 1. Flash the generated `.img` to a microSD card.

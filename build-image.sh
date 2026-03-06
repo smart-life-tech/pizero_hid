@@ -11,6 +11,91 @@ WIFI_PSK="${WIFI_PSK:-}"
 WIFI_COUNTRY="${WIFI_COUNTRY:-US}"
 PI_GEN_BRANCH="${PI_GEN_BRANCH:-bookworm}"
 
+run_privileged() {
+  if [[ "${EUID}" -eq 0 ]]; then
+    "$@"
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo "$@"
+  else
+    return 1
+  fi
+}
+
+safe_unmount_target() {
+  local target="$1"
+
+  if [[ ! -e "${target}" ]]; then
+    return 0
+  fi
+
+  run_privileged umount "${target}" >/dev/null 2>&1 \
+    || run_privileged umount -l "${target}" >/dev/null 2>&1 \
+    || true
+}
+
+cleanup_pi_gen_mounts() {
+  local work_dir="${PI_GEN_DIR}/work"
+  local found_stage=0
+
+  if [[ ! -d "${work_dir}" ]]; then
+    return 0
+  fi
+
+  while IFS= read -r -d '' stage_dir; do
+    local rootfs="${stage_dir}/rootfs"
+    local -a mount_targets=()
+    local target
+
+    if [[ ! -d "${rootfs}" ]]; then
+      continue
+    fi
+
+    found_stage=1
+    echo "Attempting stale mount cleanup in: ${stage_dir}"
+
+    # Kill any process still holding open files in the chroot.
+    if command -v fuser >/dev/null 2>&1; then
+      run_privileged fuser -km "${rootfs}" >/dev/null 2>&1 || true
+    fi
+
+    if command -v findmnt >/dev/null 2>&1; then
+      while IFS= read -r target; do
+        mount_targets+=("${target}")
+      done < <(findmnt -R -n -o TARGET "${rootfs}" 2>/dev/null | tac)
+    fi
+
+    if (( ${#mount_targets[@]} == 0 )); then
+      mount_targets=(
+        "${rootfs}/sys"
+        "${rootfs}/proc"
+        "${rootfs}/dev/pts"
+        "${rootfs}/dev"
+        "${rootfs}/run"
+      )
+    fi
+
+    for target in "${mount_targets[@]}"; do
+      safe_unmount_target "${target}"
+    done
+  done < <(find "${work_dir}" -mindepth 1 -maxdepth 2 -type d -name 'stage*' -print0 2>/dev/null)
+
+  if (( found_stage == 1 )); then
+    echo "Stale mount cleanup pass finished."
+  fi
+}
+
+run_pi_gen_build() {
+  if command -v docker >/dev/null 2>&1; then
+    echo "Using Docker build (recommended)..."
+    (cd "${PI_GEN_DIR}" && run_privileged ./build-docker.sh)
+  else
+    echo "Docker not found. Falling back to native build..."
+    ensure_native_deps
+    cleanup_pi_gen_mounts
+    (cd "${PI_GEN_DIR}" && run_privileged ./build.sh)
+  fi
+}
+
 ensure_native_deps() {
   # Only pre-check on Debian-like systems where we can provide exact package help.
   if ! command -v dpkg-query >/dev/null 2>&1; then
@@ -110,13 +195,15 @@ STAGE_LIST="stage0 stage1 stage2 stage-hid"
 DEPLOY_COMPRESSION='none'
 EOF
 
-if command -v docker >/dev/null 2>&1; then
-  echo "Using Docker build (recommended)..."
-  (cd "${PI_GEN_DIR}" && sudo ./build-docker.sh)
-else
-  echo "Docker not found. Falling back to native build..."
-  ensure_native_deps
-  (cd "${PI_GEN_DIR}" && sudo ./build.sh)
+if ! run_pi_gen_build; then
+  echo
+  echo "Build failed. Running emergency cleanup for stuck pi-gen mounts..."
+  cleanup_pi_gen_mounts
+  echo
+  echo "If this persists, inspect holders with:"
+  echo "  sudo lsof +D \"${PI_GEN_DIR}/work\""
+  echo "Then retry: ./build-image.sh"
+  exit 1
 fi
 
 echo

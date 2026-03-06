@@ -58,6 +58,54 @@ WIFI_COUNTRY="US" \
 
 If successful, your final image will be under `pi-gen/deploy/`.
 
+## Live setup directly on a Pi Zero (no image build)
+
+Yes, you can configure HID directly on the running Pi Zero, test immediately, and clone the SD card later.
+
+On the Pi Zero:
+
+```bash
+cd ~/pizero_hid
+chmod +x ./setup-live-pizero.sh
+sudo ./setup-live-pizero.sh
+sudo reboot
+```
+
+After reboot:
+
+```bash
+sudo /usr/local/sbin/hid-postboot-verify.sh
+```
+
+Optional Wi-Fi override while installing:
+
+```bash
+sudo APPLY_WIFI=1 WIFI_SSID="your_ssid" WIFI_PSK="your_psk" WIFI_COUNTRY="US" ./setup-live-pizero.sh
+```
+
+By default, `setup-live-pizero.sh` does not modify `/etc/wpa_supplicant/wpa_supplicant-wlan0.conf`.
+
+Notes:
+
+- Use the Pi Zero USB data/OTG port for HID enumeration.
+- This path changes the live system in place; keep a backup if needed.
+
+### Copy image out later from the Pi itself
+
+If your Pi boots from `/dev/mmcblk0`, you can compress and copy the card image:
+
+```bash
+sudo dd if=/dev/mmcblk0 bs=4M status=progress | gzip -1 > ~/pizero-hid-$(date +%Y%m%d).img.gz
+```
+
+Then copy to your PC (from Windows PowerShell):
+
+```powershell
+scp pi@<pi-ip>:~/pizero-hid-*.img.gz .
+```
+
+Create the image while the system is idle for best consistency.
+
 ## Running on a Pi 3B over SSH (recommended method)
 
 Building `pi-gen` directly on a Pi 3B can temporarily drop SSH if the device hits thermal, power, or memory pressure.

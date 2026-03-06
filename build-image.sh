@@ -10,6 +10,50 @@ WIFI_SSID="${WIFI_SSID:-}"
 WIFI_PSK="${WIFI_PSK:-}"
 WIFI_COUNTRY="${WIFI_COUNTRY:-US}"
 
+ensure_native_deps() {
+  # Only pre-check on Debian-like systems where we can provide exact package help.
+  if ! command -v dpkg-query >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local -a required_pkgs=(
+    quilt
+    qemu-user-binfmt
+    debootstrap
+    zerofree
+    libarchive-tools
+    pigz
+    arch-test
+  )
+  local -a missing_pkgs=()
+  local pkg
+
+  for pkg in "${required_pkgs[@]}"; do
+    if ! dpkg-query -W -f='${Status}' "${pkg}" 2>/dev/null | grep -q "install ok installed"; then
+      missing_pkgs+=("${pkg}")
+    fi
+  done
+
+  # xxd may be shipped by either `xxd` or `vim-common`, depending on distro.
+  if ! command -v xxd >/dev/null 2>&1; then
+    if ! dpkg-query -W -f='${Status}' xxd 2>/dev/null | grep -q "install ok installed" \
+      && ! dpkg-query -W -f='${Status}' vim-common 2>/dev/null | grep -q "install ok installed"; then
+      missing_pkgs+=("xxd")
+    fi
+  fi
+
+  if (( ${#missing_pkgs[@]} > 0 )); then
+    echo "ERROR: Missing native pi-gen dependencies: ${missing_pkgs[*]}"
+    echo
+    echo "Install them with:"
+    echo "  sudo apt-get update"
+    echo "  sudo apt-get install -y ${missing_pkgs[*]}"
+    echo
+    echo "Then re-run: ./build-image.sh"
+    exit 1
+  fi
+}
+
 if [[ -z "${WIFI_SSID}" || -z "${WIFI_PSK}" ]]; then
   echo "ERROR: Set WIFI_SSID and WIFI_PSK before running."
   echo "Example: WIFI_SSID=\"ember_wolf\" WIFI_PSK=\"password\" ./build-image.sh"
@@ -57,6 +101,7 @@ if command -v docker >/dev/null 2>&1; then
   (cd "${PI_GEN_DIR}" && sudo ./build-docker.sh)
 else
   echo "Docker not found. Falling back to native build..."
+  ensure_native_deps
   (cd "${PI_GEN_DIR}" && sudo ./build.sh)
 fi
 

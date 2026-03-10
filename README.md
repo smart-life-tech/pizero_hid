@@ -62,6 +62,8 @@ If successful, your final image will be under `pi-gen/deploy/`.
 
 Yes, you can configure HID directly on the running Pi Zero, test immediately, and clone the SD card later.
 
+For a dedicated step-by-step guide, see `README-live-pizero.md`.
+
 On the Pi Zero:
 
 ```bash
